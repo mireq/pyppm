@@ -84,51 +84,41 @@ static PyObject *Model_dump(PyObject *self, PyObject *args)
 
 static PyObject *Model_train(PyObject *self, PyObject *args)
 {
-    char *path = NULL;
+    unsigned char *buf = NULL;
+    Py_ssize_t size = 0;
 
-    if (PyArg_ParseTuple(args, "s", &path)) {
-        FILE *fp = fopen(path, "rb");
-        if (fp == NULL) {
-            PyErr_SetString(PyExc_IOError, strerror(errno));
-        } else {
-            NullOutputAdapter nad;
+    if (PyArg_ParseTuple(args, "s#", &buf, &size)) {
+        NullOutputAdapter nad;
 
-            PPMEncoder<NullOutputAdapter, DefaultContextUpdater> penc(nad, Model_Ptr(self));
-            penc.start_encoding();
-            for (int ch = fgetc(fp); ch != EOF; ch = fgetc(fp)) {
-                penc.encode(ch);
-            }
-            penc.finish_encoding();
-            fclose(fp);
-            
-            return Py_BuildValue("i", nad.count());
+        PPMEncoder<NullOutputAdapter, DefaultContextUpdater> penc(nad, Model_Ptr(self));
+        penc.start_encoding();
+        for (Py_ssize_t pos = 0; pos < size; ++pos) {
+            penc.encode(buf[pos]);
         }
+        penc.finish_encoding();
+        return Py_BuildValue("i", nad.count());
     }
     return Py_BuildValue("");
 }
 
 static PyObject *Model_predict(PyObject *self, PyObject *args)
 {
-    char *path = NULL;
+    unsigned char *buf = NULL;
+    Py_ssize_t size = 0;
 
-    if (PyArg_ParseTuple(args, "s", &path)) {
-        FILE *fp = fopen(path, "rb");
-        if (fp == NULL) {
-            PyErr_SetString(PyExc_IOError, strerror(errno));
-        } else {
-            NullOutputAdapter nad;
+    if (PyArg_ParseTuple(args, "s#", &buf, &size)) {
+        NullOutputAdapter nad;
 
-            PPMModel *pm = Model_Ptr(self);
-            pm->m_buffer.reset();
-            PPMEncoder<NullOutputAdapter, NopeContextUpdater> penc(nad, pm);
-            penc.start_encoding();
-            for (int ch = fgetc(fp); ch != EOF; ch = fgetc(fp))
-                penc.encode(ch);
-            penc.finish_encoding();
-            fclose(fp);
-
-            return Py_BuildValue("i", nad.count());
+        PPMModel *pm = Model_Ptr(self);
+        pm->m_buffer.reset();
+        PPMEncoder<NullOutputAdapter, NopeContextUpdater> penc(nad, pm);
+        penc.start_encoding();
+        for (Py_ssize_t pos = 0; pos < size; ++pos) {
+            penc.encode(buf[pos]);
         }
+        penc.finish_encoding();
+
+        return Py_BuildValue("i", nad.count());
     }
     return Py_BuildValue("");
 }
